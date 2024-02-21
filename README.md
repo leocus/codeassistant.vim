@@ -22,3 +22,6 @@ The default model is `deepseek-coder:6.7b-instruct`, you can change it by editin
 ```
 Plug 'leocus/codeassistant.vim'
 ```
+
+## Disclaimer
+This plugin uses pretrained LLMs to generate code. Beware of the limitations of LLMs and of possible bugs in the plugin (which are quite likely :) ). If you have any suggestion for improving this plugin or to report any bug, please open an issue! :)
