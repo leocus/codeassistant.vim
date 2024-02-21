@@ -17,5 +17,5 @@ The default model is `deepseek-coder:6.7b-instruct`, you can change it by editin
 
 ## Install with vim-plug
 ```
-Plug 'itchyny/lightline.vim'
+Plug 'leocus/codeassistant.vim'
 ```
