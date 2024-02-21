@@ -1,8 +1,8 @@
 # CodeAssistant.vim
 A vim plugin for code completion with local LLMs.
 
-<script async id="asciicast-569727" src="https://asciinema.org/a/Cn6qlS0RU8RqM17smGdu1nrom"></script>
-<script async id="asciicast-569727" src="https://asciinema.org/a/vGxgwxjt4WptNJTfDUOS95R6p"></script>
+[![asciicast](https://asciinema.org/a/Cn6qlS0RU8RqM17smGdu1nrom.svg)](https://asciinema.org/a/Cn6qlS0RU8RqM17smGdu1nrom)
+[![asciicast](https://asciinema.org/a/vGxgwxjt4WptNJTfDUOS95R6p.svg)](https://asciinema.org/a/vGxgwxjt4WptNJTfDUOS95R6p)
 
 ## Usage
 ### AutoCompletion mode
