@@ -1,21 +1,25 @@
-import vim
 import json
-import requests
 
+import requests
+import vim
 
 MODEL_NAME = "deepseek-coder:6.7b-instruct"
 
 
 class AutoComplete:
+
     def __init__(self):
         self.payload = {
             "model": MODEL_NAME,
             "messages": [
-                {"role": "system", "content": "You are an helpful coding assistant. Your goal is to help the user with every request."}
+                {
+                    "role": "system",
+                    "content": "You are an helpful coding assistant. Your goal is to help the user with every request.",  # noqa: E501
+                },
             ],
-            "stream": False
+            "stream": False,
         }
-        
+
     def get_selection(self, buffer_lines, start_line, end_line):
         prompt = "```\n"
         for i in range(start_line - 1, end_line):
@@ -24,18 +28,15 @@ class AutoComplete:
         prompt += "```"
         return prompt
 
-
     def query_model(self, prompt):
         payload = self.payload.copy()
         payload["messages"].append({"role": "user", "content": prompt})
 
-        url = 'http://localhost:11434/api/chat'
-        headers = {'Content-type': 'application/json'}
+        url = "http://localhost:11434/api/chat"
+        headers = {"Content-type": "application/json"}
         response = requests.post(url, data=json.dumps(payload), headers=headers)
 
-        out = json.loads(response.text)["message"]["content"]
-
-        return out
+        return json.loads(response.text)["message"]["content"]
 
     def parse_code(self, out):
         code = []
@@ -48,7 +49,7 @@ class AutoComplete:
             elif reading and "```" in line:
                 reading = False
                 break
-        
+
         return code
 
     def exec_prompt(self, start_line, end_line, prompt) -> None:
@@ -60,16 +61,32 @@ class AutoComplete:
         code = self.parse_code(out)
 
         # Replace text
-        del buffer_lines[start_line - 1:end_line]
-        vim.api.buf_set_lines(buffer_lines, start_line - 1, start_line - 1 + len(code), False, code)
+        del buffer_lines[start_line - 1 : end_line]
+        vim.api.buf_set_lines(
+            buffer_lines,
+            start_line - 1,
+            start_line - 1 + len(code),
+            False,
+            code,
+        )
 
     def comment(self, start_line, end_line) -> None:
         prompt = "Rewrite the code above, line by line, by adding documentation and comments."
-        vim.async_call(self.exec_prompt, start_line=start_line, end_line=end_line, prompt=prompt)
+        vim.async_call(
+            self.exec_prompt,
+            start_line=start_line,
+            end_line=end_line,
+            prompt=prompt,
+        )
 
     def autocomplete(self, start_line, end_line) -> None:
         prompt = "Continue the implementation of this piece of code."
-        vim.async_call(self.exec_prompt, start_line=start_line, end_line=end_line, prompt=prompt)
+        vim.async_call(
+            self.exec_prompt,
+            start_line=start_line,
+            end_line=end_line,
+            prompt=prompt,
+        )
 
     def postprocess(self, out):
         code = []
@@ -83,4 +100,3 @@ class AutoComplete:
                 reading = False
                 break
         return code
-        
