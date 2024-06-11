@@ -19,6 +19,8 @@ Requires `ollama` and vim with python3 support.
 The default model is `deepseek-coder:6.7b-instruct`, you can change it by editing `python3/codeassistant.py`, by changing the `MODEL_NAME` variable.
 
 ## Install with vim-plug
+First, install ollama from [https://ollama.com/](https://ollama.com/),
+then, install the plugin with:
 ```
 Plug 'leocus/codeassistant.vim'
 ```
