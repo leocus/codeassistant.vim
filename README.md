@@ -16,7 +16,10 @@ To comment a piece of code, select the lines (in visual mode) and call `:'<,'>Co
 
 ## Requirements
 Requires `ollama` and vim with python3 support.
-The default model is `deepseek-coder:6.7b-instruct`, you can change it by editing `python3/codeassistant.py`, by changing the `MODEL_NAME` variable.
+
+## Configuration
+The default model is `deepseek-coder:6.7b-instruct`, you can change it by editing `python3/codeassistant.py`, by changing the `model_name` value in the `get_config` function.
+Also, to change the server address, simply edit the `url` field in `get_config`.
 
 ## Install with vim-plug
 First, install ollama from [https://ollama.com/](https://ollama.com/),
@@ -27,3 +30,7 @@ Plug 'leocus/codeassistant.vim'
 
 ## Disclaimer
 This plugin uses pretrained LLMs to generate code. Beware of the limitations of LLMs and of possible bugs in the plugin (which are quite likely :) ). If you have any suggestion for improving this plugin or to report any bug, please open an issue! :)
+
+# TODO
+- [ ] Add the possibility to have an authentication token
+

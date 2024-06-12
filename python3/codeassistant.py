@@ -1,16 +1,21 @@
-import json
-
-import requests
 import vim
+import json
+import requests
 
-MODEL_NAME = "deepseek-coder:6.7b-instruct"
+
+def get_config():
+    return {
+        "model_name": "deepseek-coder:6.7b-instruct",
+        "url": "http://localhost:11434/api/chat",
+    }
 
 
 class AutoComplete:
 
     def __init__(self):
+        self.config = get_config()
         self.payload = {
-            "model": MODEL_NAME,
+            "model": self.config["model_name"],
             "messages": [
                 {
                     "role": "system",
@@ -32,7 +37,7 @@ class AutoComplete:
         payload = self.payload.copy()
         payload["messages"].append({"role": "user", "content": prompt})
 
-        url = "http://localhost:11434/api/chat"
+        url = self.config["url"]
         headers = {"Content-type": "application/json"}
         response = requests.post(url, data=json.dumps(payload), headers=headers)
 
