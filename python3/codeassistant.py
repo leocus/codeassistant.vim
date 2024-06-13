@@ -7,6 +7,7 @@ def get_config():
     return {
         "model_name": "deepseek-coder:6.7b-instruct",
         "url": "http://localhost:11434/api/chat",
+        "token": "no-token-needed"
     }
 
 
@@ -14,6 +15,10 @@ class AutoComplete:
 
     def __init__(self):
         self.config = get_config()
+        self.headers = {
+            "Authorization": f"Bearer {self.config['token']}",
+            "Content-Type": "application/json"
+        }
         self.payload = {
             "model": self.config["model_name"],
             "messages": [
@@ -38,8 +43,7 @@ class AutoComplete:
         payload["messages"].append({"role": "user", "content": prompt})
 
         url = self.config["url"]
-        headers = {"Content-type": "application/json"}
-        response = requests.post(url, data=json.dumps(payload), headers=headers)
+        response = requests.post(url, data=json.dumps(payload), headers=self.headers)
 
         return json.loads(response.text)["message"]["content"]
 
