@@ -15,7 +15,8 @@ To perform autocompletion, select the lines that you want to complete (in visual
 To comment a piece of code, select the lines (in visual mode) and call `:'<,'>Comment`
 
 ## Requirements
-Requires `ollama` and vim with python3 support.
+Requires a server for inference vim with python3 support.
+An example of server can be [ollama](https://ollama.com) (for local inference), or you can also use remote models (e.g., [groq](groq.com)).
 
 ## Configuration
 The default model is `deepseek-coder:6.7b-instruct`, you can change it by editing `python3/codeassistant.py`, by changing the `model_name` value in the `get_config` function.

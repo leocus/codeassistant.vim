@@ -44,8 +44,13 @@ class AutoComplete:
 
         url = self.config["url"]
         response = requests.post(url, data=json.dumps(payload), headers=self.headers)
+        response = json.loads(response.text)
 
-        return json.loads(response.text)["message"]["content"]
+        if "choices" in response: 
+            return response["choices"][0]["message"]["content"]
+        else:
+            return response["message"]["content"]
+
 
     def parse_code(self, out):
         code = []
