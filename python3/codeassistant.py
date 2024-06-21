@@ -66,7 +66,7 @@ class AutoComplete:
 
         return code
 
-    def exec_prompt(self, start_line, end_line, prompt) -> None:
+    def exec_prompt(self, start_line, end_line, prompt, replace=False) -> None:
         buffer_lines = vim.current.buffer
         prompt = self.get_selection(buffer_lines, start_line, end_line) + "\n" + prompt
 
@@ -75,7 +75,10 @@ class AutoComplete:
         code = self.parse_code(out)
 
         # Replace text
-        del buffer_lines[start_line - 1 : end_line]
+        if replace:
+            del buffer_lines[start_line - 1 : end_line]
+        else: 
+            start_line = end_line + 1
         vim.api.buf_set_lines(
             buffer_lines,
             start_line - 1,
@@ -91,6 +94,7 @@ class AutoComplete:
             start_line=start_line,
             end_line=end_line,
             prompt=prompt,
+            replace=True,
         )
 
     def autocomplete(self, start_line, end_line) -> None:
@@ -100,6 +104,7 @@ class AutoComplete:
             start_line=start_line,
             end_line=end_line,
             prompt=prompt,
+            replace=False,
         )
 
     def postprocess(self, out):
