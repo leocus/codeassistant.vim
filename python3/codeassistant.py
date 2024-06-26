@@ -11,24 +11,38 @@ from langchain_community.embeddings.ollama import OllamaEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
+CFGNAME = ".codeassistant_config.json" 
 VECTORSTOREPATH = ".codeassistant_vectorstore/"
 ALLOWED_EXTENSIONS = [".py", ".json", ".js", ".c", ".cpp", ".java"]
 
 
 def get_config():
-    return {
-        "model_name": "deepseek-coder:6.7b-instruct",
-        "url": "http://localhost:11434/api/chat",
-        "token": "no-token-needed",
-        "rag": False,  # Disabled by default to keep compatibility
-        "chunk_size": 500,  # Used for RAG
-        "rag_model": "deepseek-coder:1.3b",
-    }
+    if os.path.exists(CFGNAME):
+        with open(CFGNAME) as f:
+            return json.load(f)
+    else:
+        default_cfg = {
+            "model_name": "deepseek-coder:6.7b-instruct",
+            "url": "http://localhost:11434/api/chat",
+            "token": None,
+            "token-env": None,  # Token from environment variables - This must contain the variable name
+            "rag": False,  # Disabled by default to keep compatibility
+            "chunk_size": 500,  # Used for RAG
+            "rag_model": "deepseek-coder:1.3b",
+        }
+
+        with open(CFGNAME, "w") as f:
+            json.dump(default_cfg, f)
+
+        return default_cfg
 
 
 class AutoComplete:
     def __init__(self):
         self.config = get_config()
+        if not self.config["token"] and self.config["token-env"]:
+            self.config["token"] = os.getenv(self.config["token-env"])
+
         self.headers = {
             "Authorization": f"Bearer {self.config['token']}",
             "Content-Type": "application/json"
@@ -51,11 +65,14 @@ class AutoComplete:
             else:
                 # Load existing vectorstore
                 self.vectorstore = Chroma(persist_directory=VECTORSTOREPATH, embedding_function=OllamaEmbeddings(model=self.config["rag_model"]))
+        else:
+            self.vectorstore = None
 
     def refresh_vectorstore(self):
         splits = []
-        files = glob.glob('*', recursive=True)
+        files = []
         files.extend(glob.glob('*/*', recursive=True))
+        files.extend(glob.glob('*', recursive=True))
 
         for file in files:
             # Check if the file is in the blacklist
@@ -77,8 +94,9 @@ class AutoComplete:
                     text_splitter = RecursiveCharacterTextSplitter(chunk_size=self.config['chunk_size'], chunk_overlap=0)
                     splitted_doc = text_splitter.split_documents(data)
 
+                    new_splitted_doc = []
                     for doc in splitted_doc:
-                        doc.page_content = f"File: {file}\n" + doc.page_content
+                        new_splitted_doc.append(self.format_doc(doc, file))
 
                     # Add the chunks to the list of chunks
                     splits.extend(splitted_doc)
@@ -90,9 +108,12 @@ class AutoComplete:
         if len(splits) > 0:
             # Build vector store
             self.vectorstore = Chroma.from_documents(documents=splits, embedding=OllamaEmbeddings(model=self.config["rag_model"]), persist_directory=VECTORSTOREPATH)
-            # pickle.dump(self.vectorstore, open(VECTORSTOREPATH, "wb"))
         else:
             self.vectorstore = None
+
+    def format_doc(self, doc, file):
+        doc.page_content = f"File: {file}\n```" + doc.page_content + "```"
+        return doc
 
     def get_selection(self, buffer_lines, start_line, end_line):
         prompt = "```\n"
@@ -109,7 +130,7 @@ class AutoComplete:
         if use_rag and self.vectorstore:
             docs = self.vectorstore.similarity_search(prompt)
 
-            prompt = "# Relevant context " + "\n".join(docs[i].page_content for i in range(len(docs))) + "\n" + prompt
+            prompt = self.ragify(docs, prompt)
 
         payload["messages"].append({"role": "user", "content": prompt})
 
@@ -117,11 +138,25 @@ class AutoComplete:
         response = requests.post(url, data=json.dumps(payload), headers=self.headers)
         response = json.loads(response.text)
 
+        if "error" in response: 
+            # Print the error and do not parse the string
+            print(response["error"])
+            return ""
+
         if "choices" in response: 
             return response["choices"][0]["message"]["content"]
-        else:
-            return response["message"]["content"]
 
+        return response["message"]["content"]
+
+    def ragify(self, docs, prompt):
+        rag_prompt = "Here is some relevant context:\n" 
+
+        # Iterate over similar docs
+        for i in range(len(docs)):
+            rag_prompt += docs[i].page_content + "\n"
+
+        rag_prompt += "\n" + prompt
+        return rag_prompt
 
     def parse_code(self, out):
         code = []
@@ -144,12 +179,14 @@ class AutoComplete:
         out = self.query_model(prompt, use_rag)
 
         code = self.parse_code(out)
+        if len(code) == 0:
+            print("Error parsing code. Message: " + out)
 
         # Replace text
         if replace:
             del buffer_lines[start_line - 1 : end_line]
         else: 
-            start_line = end_line
+            start_line = end_line - 1
 
         vim.api.buf_set_lines(
             buffer_lines,
@@ -177,7 +214,7 @@ class AutoComplete:
             start_line=start_line,
             end_line=end_line,
             prompt=prompt,
-            replace=False,
+            replace=True,
             use_rag=True,
         )
 
