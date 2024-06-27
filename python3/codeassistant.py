@@ -2,7 +2,6 @@ import os
 import vim
 import json
 import glob
-import pickle
 import requests
 
 from langchain_chroma import Chroma
@@ -17,6 +16,7 @@ ALLOWED_EXTENSIONS = [".py", ".json", ".js", ".c", ".cpp", ".java"]
 
 
 def get_config():
+    """Retrieves the config if exists, otherwise it makes a new one."""
     if os.path.exists(CFGNAME):
         with open(CFGNAME) as f:
             return json.load(f)
@@ -39,14 +39,18 @@ def get_config():
 
 class AutoComplete:
     def __init__(self):
+        # Retrieve/create cfg
         self.config = get_config()
         if not self.config["token"] and self.config["token-env"]:
             self.config["token"] = os.getenv(self.config["token-env"])
 
+        # Set up headers
         self.headers = {
             "Authorization": f"Bearer {self.config['token']}",
             "Content-Type": "application/json"
         }
+
+        # Set up prompt template
         self.payload = {
             "model": self.config["model_name"],
             "messages": [
@@ -66,16 +70,19 @@ class AutoComplete:
                 # Load existing vectorstore
                 self.vectorstore = Chroma(persist_directory=VECTORSTOREPATH, embedding_function=OllamaEmbeddings(model=self.config["rag_model"]))
         else:
+            # Disable vectorstore
             self.vectorstore = None
 
     def refresh_vectorstore(self):
         splits = []
         files = []
+
+        # Get all files in the current directory and its subdirectories
         files.extend(glob.glob('*/*', recursive=True))
         files.extend(glob.glob('*', recursive=True))
 
         for file in files:
-            # Check if the file is in the blacklist
+            # Check if the file is in the whitelist
             to_be_used = False
             i = 0
             while i < len(ALLOWED_EXTENSIONS) and not to_be_used:
@@ -109,13 +116,20 @@ class AutoComplete:
             # Build vector store
             self.vectorstore = Chroma.from_documents(documents=splits, embedding=OllamaEmbeddings(model=self.config["rag_model"]), persist_directory=VECTORSTOREPATH)
         else:
+            # If there are no suitable files, avoid creating a vector store
             self.vectorstore = None
 
     def format_doc(self, doc, file):
+        """
+        Format docs for RAG. Each chunk is represented as:
+        File: <filename>
+        ```<code>```
+        """
         doc.page_content = f"File: {file}\n```" + doc.page_content + "```"
         return doc
 
     def get_selection(self, buffer_lines, start_line, end_line):
+        """Wrap the current selection in triple backticks"""
         prompt = "```\n"
         for i in range(start_line - 1, end_line):
             prompt += buffer_lines[i] + "\n"
@@ -124,6 +138,7 @@ class AutoComplete:
         return prompt
 
     def query_model(self, prompt, use_rag=False):
+        """Execute the request"""
         payload = self.payload.copy()
 
         # Search for a similar piece of code if RAG is enabled
@@ -149,6 +164,7 @@ class AutoComplete:
         return response["message"]["content"]
 
     def ragify(self, docs, prompt):
+        """Transform the prompt in a RAG prompt"""
         rag_prompt = "Here is some relevant context:\n" 
 
         # Iterate over similar docs
